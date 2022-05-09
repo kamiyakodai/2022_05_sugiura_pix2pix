@@ -28,38 +28,44 @@ from detectron2.config import get_cfg
 from detectron2.utils.visualizer import Visualizer
 from detectron2.data import MetadataCatalog, DatasetCatalog
 
-"""#multiChannelConvert
-
-"""
-
-def multichannelConvert(image_tensor):
-  image_numpy = image_tensor.to('cpu').detach().numpy().copy()
-  image_class = []
-
-  for i in range(image_numpy.shape[0]):
-    for j in range(image_numpy.shape[1]):
-      if image_class.count(image_numpy[i][j]) == 0:
-        image_class.append(image_numpy[i][j])
-
-  sorted_image_class = sorted(image_class)
-
-  multichannelImage = np.zeros((len(sorted_image_class), image_numpy.shape[0], image_numpy.shape[1]), dtype=float)
-
-  for i in range(image_numpy.shape[0]):
-    for j in range(image_numpy.shape[1]):
-      for k in range(len(sorted_image_class)):
-        if sorted_image_class[k] == image_numpy[i][j]:
-          multichannelImage[k][i][j] = 1
+import argparse
 
 
-  # print(multichannelImage)
 
-  return multichannelImage
 
-"""#pickle保存"""
+
+def multiChannelConvert(image_tensor):
+  """
+  multiChannelConvert
+  """
+
+  img = image_tensor.to('cpu').detach().numpy().copy()
+  img_n_class = []
+
+  for i in range(img.shape[0]):
+    for j in range(img.shape[1]):
+      if img[i][j] not in img_n_class:
+        img_n_class.append(img[i][j])
+
+  img_n_class = sorted(img_n_class)
+  C, H, W = len(img_n_class), img.shape[0], img.shape[1]
+  multi_channel_image = np.zeros((C, H, W), dtype=float)
+
+  for k in range(len(img_n_class)):
+    for i in range(img.shape[0]):
+      for j in range(img.shape[1]):
+        if img_n_class[k] == img[i][j]:
+          multi_channel_image[k][i][j] = 1
+
+
+  # print(multi_channel_image)
+
+  return multi_channel_image
+
 
 def keep_pickle(multichannelImage, path, file_number):
-  dirname = os.path.join('/mnt/HDD4TB-3/sugiura/pix2pix/mycreat_UCFdataset_multichannel_pickle', path)
+  """#pickle保存"""
+  dirname = os.path.join('/mnt/HDD4TB-3/sugiura/pix2pix/mycreat_UCFdataset_multichannel_pickle2', path)
   if not os.path.exists(dirname):
     os.makedirs(dirname)
 
@@ -68,63 +74,80 @@ def keep_pickle(multichannelImage, path, file_number):
   with open(pickle_path, mode='wb') as f:
     pickle.dump(multichannelImage, f)
 
-"""# Run a pre-trained detectron2 model
-
-
-"""
-
-
-"""Then, we create a detectron2 config and a detectron2 `DefaultPredictor` to run inference on this image."""
-
-path = '/mnt/HDD4TB-3/sugiura/pix2pix/imageUCFdataset'
-
-assert os.path.isdir(path)
-
-files = os.listdir(path)
-files_dir = [f for f in files if os.path.isdir(os.path.join(path, f))]
-files_dir = sorted(files_dir)
-
-# print(files_dir)
-
-for i in range(len(files_dir)-37):
-  fname_path = os.path.join(path, files_dir[i+37])
-  files = os.listdir(fname_path)
-  files_file = [f for f in files if os.path.isfile(os.path.join(fname_path, f))]
-  print(len(files_file))
-
-  for index in range(len(files_file)):
-    fname = files_dir[i+37] + '_' + str(index) + '.png'
-    file_path = os.path.join(path, files_dir[i+37], fname)
-    print(file_path)
-    assert os.path.exists(file_path)
-    im = cv2.imread(file_path)
-    cfg = get_cfg()
-    cfg.merge_from_file(model_zoo.get_config_file("COCO-PanopticSegmentation/panoptic_fpn_R_101_3x.yaml"))
-    cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-PanopticSegmentation/panoptic_fpn_R_101_3x.yaml")
-    predictor = DefaultPredictor(cfg)
-    panoptic_seg, segments_info = predictor(im)["panoptic_seg"]
-
-    multichannelImage = multichannelConvert(panoptic_seg)
-
-    keep_pickle(multichannelImage, files_dir[i+37], index)
-
-    # torch.set_printoptions(edgeitems=1000)
-    # print(panoptic_seg)
-    # v = Visualizer(im[:, :, ::-1], MetadataCatalog.get(cfg.DATASETS.TRAIN[0]), scale=1.2)
-    # out = v.draw_panoptic_seg_predictions(panoptic_seg.to("cpu"), segments_info)
-    # cv2_imshow(out.get_image()[:, :, ::-1])
 
 
 
-# Inference with a panoptic segmentation model
-# cfg = get_cfg()
-# cfg.merge_from_file(model_zoo.get_config_file("COCO-PanopticSegmentation/panoptic_fpn_R_101_3x.yaml"))
-# cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-PanopticSegmentation/panoptic_fpn_R_101_3x.yaml")
-# predictor = DefaultPredictor(cfg)
+def main():
+  """
+  Run a pre-trained detectron2 model
+  Then, we create a detectron2 config
+  and a detectron2 `DefaultPredictor` to run inference on this image.
+  """
 
-# panoptic_seg, segments_info = predictor(im)["panoptic_seg"]
-# print(panoptic_seg.size())
-# v = Visualizer(im[:, :, ::-1], MetadataCatalog.get(cfg.DATASETS.TRAIN[0]), scale=1.2)
-# print(type(v))
-# out = v.draw_panoptic_seg_predictions(panoptic_seg.to("cpu"), segments_info)
-# cv2_imshow(out.get_image()[:, :, ::-1])
+
+  parser = argparse.ArgumentParser(description='panopitc segmentation')
+  parser.add_argument('-r', '--path', type=str,
+                      default='/mnt/HDD4TB-3/sugiura/pix2pix/imageUCFdataset/',
+                      help='path of dataset.')
+  args = parser.parse_args()
+  print(args)
+
+
+
+  path = args.path
+  assert os.path.isdir(path)
+
+  files = os.listdir(path)
+  files_dir = [f for f in files if os.path.isdir(os.path.join(path, f))]
+  files_dir = sorted(files_dir)
+
+  # print(files_dir)
+
+
+  for i in range(len(files_dir) - 37):
+    fname_path = os.path.join(path, files_dir[i + 37])
+    files = os.listdir(fname_path)
+    files_file = [f for f in files if os.path.isfile(os.path.join(fname_path, f))]
+    print(len(files_file))
+
+    for index in range(len(files_file)):
+      fname = files_dir[i+37] + '_' + str(index) + '.png'
+      file_path = os.path.join(path, files_dir[i+37], fname)
+      print(file_path)
+      assert os.path.exists(file_path)
+      im = cv2.imread(file_path)
+      cfg = get_cfg()
+      cfg.merge_from_file(model_zoo.get_config_file("COCO-PanopticSegmentation/panoptic_fpn_R_101_3x.yaml"))
+      cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-PanopticSegmentation/panoptic_fpn_R_101_3x.yaml")
+      predictor = DefaultPredictor(cfg)
+      panoptic_seg, segments_info = predictor(im)["panoptic_seg"]
+
+      multichannelImage = multiChannelConvert(panoptic_seg)
+
+      keep_pickle(multichannelImage, files_dir[i+37], index)
+
+      # torch.set_printoptions(edgeitems=1000)
+      # print(panoptic_seg)
+      # v = Visualizer(im[:, :, ::-1], MetadataCatalog.get(cfg.DATASETS.TRAIN[0]), scale=1.2)
+      # out = v.draw_panoptic_seg_predictions(panoptic_seg.to("cpu"), segments_info)
+      # cv2_imshow(out.get_image()[:, :, ::-1])
+
+
+
+  # Inference with a panoptic segmentation model
+  # cfg = get_cfg()
+  # cfg.merge_from_file(model_zoo.get_config_file("COCO-PanopticSegmentation/panoptic_fpn_R_101_3x.yaml"))
+  # cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-PanopticSegmentation/panoptic_fpn_R_101_3x.yaml")
+  # predictor = DefaultPredictor(cfg)
+
+  # panoptic_seg, segments_info = predictor(im)["panoptic_seg"]
+  # print(panoptic_seg.size())
+  # v = Visualizer(im[:, :, ::-1], MetadataCatalog.get(cfg.DATASETS.TRAIN[0]), scale=1.2)
+  # print(type(v))
+  # out = v.draw_panoptic_seg_predictions(panoptic_seg.to("cpu"), segments_info)
+  # cv2_imshow(out.get_image()[:, :, ::-1])
+
+
+
+if __name__ == '__main__':
+  main()
