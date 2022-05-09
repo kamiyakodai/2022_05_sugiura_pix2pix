@@ -63,7 +63,7 @@ def multiChannelConvert(image_tensor):
   return multi_channel_image
 
 
-def keep_pickle(multichannelImage, path, file_number):
+def keepPickle(multi_channel_image, path, file_number):
   """#pickle保存"""
   dirname = os.path.join('/mnt/HDD4TB-3/sugiura/pix2pix/mycreat_UCFdataset_multichannel_pickle2', path)
   if not os.path.exists(dirname):
@@ -72,7 +72,7 @@ def keep_pickle(multichannelImage, path, file_number):
   fname = path + '_' + str(file_number) + '.pickle'
   pickle_path = os.path.join(dirname, fname)
   with open(pickle_path, mode='wb') as f:
-    pickle.dump(multichannelImage, f)
+    pickle.dump(multi_channel_image, f)
 
 
 
@@ -111,8 +111,8 @@ def main():
     print(len(files_file))
 
     for index in range(len(files_file)):
-      fname = files_dir[i+37] + '_' + str(index) + '.png'
-      file_path = os.path.join(path, files_dir[i+37], fname)
+      fname = files_dir[i + 37] + '_' + str(index) + '.png'
+      file_path = os.path.join(path, files_dir[i + 37], fname)
       print(file_path)
       assert os.path.exists(file_path)
       im = cv2.imread(file_path)
@@ -122,9 +122,9 @@ def main():
       predictor = DefaultPredictor(cfg)
       panoptic_seg, segments_info = predictor(im)["panoptic_seg"]
 
-      multichannelImage = multiChannelConvert(panoptic_seg)
+      multi_channel_image = multiChannelConvert(panoptic_seg)
 
-      keep_pickle(multichannelImage, files_dir[i+37], index)
+      keepPickle(multi_channel_image, files_dir[i + 37], index)
 
       # torch.set_printoptions(edgeitems=1000)
       # print(panoptic_seg)
