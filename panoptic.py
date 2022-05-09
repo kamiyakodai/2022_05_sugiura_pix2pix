@@ -57,14 +57,14 @@ def multiChannelConvert(image_tensor):
                 if img_n_class[k] == img[i][j]:
                     multi_channel_image[k][i][j] = 1
 
-
-    # print(multi_channel_image)
-
     return multi_channel_image
+
 
 def keepPickle(multi_channel_image, path, file_number):
     """#pickle保存"""
+
     dirname = os.path.join('/mnt/HDD4TB-3/sugiura/pix2pix/mycreat_UCFdataset_multichannel_pickle2', path)
+
     if not os.path.exists(dirname):
        os.makedirs(dirname)
 
@@ -74,8 +74,6 @@ def keepPickle(multi_channel_image, path, file_number):
        pickle.dump(multi_channel_image, f)
 
 
-
-
 def main():
     """
     Run a pre-trained detectron2 model
@@ -83,15 +81,12 @@ def main():
     and a detectron2 `DefaultPredictor` to run inference on this image.
     """
 
-
     parser = argparse.ArgumentParser(description='panopitc segmentation')
     parser.add_argument('-r', '--path', type=str,
                         default='/mnt/HDD4TB-3/sugiura/pix2pix/imageUCFdataset/',
                         help='path of dataset.')
     args = parser.parse_args()
     print(args)
-
-
 
     path = args.path
     assert os.path.isdir(path)
