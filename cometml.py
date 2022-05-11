@@ -9,8 +9,22 @@ def comet():
         )
     return experiment
 
-def log_comet(experiment, fretchet_dist, epoch):
+def FIDComet(experiment, fretchet_dist, epoch):
     experiment.log_metric("FIDscore",
                             fretchet_dist,
+                            step = epoch,
+                            )
+
+
+def gLossComet(experiment, lossG, epoch):
+    experiment.log_metric("lossG",
+                            lossG,
+                            step = epoch,
+                            )
+
+
+def dLossComet(experiment, lossD, epoch):
+    experiment.log_metric("lossD",
+                            lossD,
                             step = epoch,
                             )

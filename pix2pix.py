@@ -518,7 +518,7 @@ def save_json(file, save_path, mode):
 
 class Opts():
     def __init__(self):
-        self.epochs = 100
+        self.epochs = 200
         self.save_data_interval = 10
         self.save_image_interval = 10
         self.log_interval = 20
@@ -586,6 +586,8 @@ for epoch in range(1, opt.epochs + 1):
         if batch_num % opt.log_interval == 0:
             print("===> Epoch[{}]({}/{}): Loss_D: {:.4f} Loss_G: {:.4f}".format(
                 epoch, batch_num, len(dataloader), model.lossD_real, model.lossG_GAN))
+            cometml.gLossComet(experiment, model.lossG_GAN, epoch)
+            cometml.dLossComet(experiment, model.lossD_real, epoch)
 
     if epoch % opt.save_data_interval == 0:
         model.save_model(epoch)
@@ -601,7 +603,8 @@ for epoch in range(1, opt.epochs + 1):
     fake = model.netG(label)
     fretchet_dist = FID.calculate_fretchet(real, fake)
     print(fretchet_dist)
-    cometml.log_comet(experiment, fretchet_dist, epoch)
+
+    cometml.FIDComet(experiment, fretchet_dist, epoch)
 
     model.update_learning_rate()
 

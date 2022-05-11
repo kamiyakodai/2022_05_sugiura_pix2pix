@@ -31,9 +31,6 @@ from detectron2.data import MetadataCatalog, DatasetCatalog
 import argparse
 
 
-
-
-
 def multiChannelConvert(image_tensor):
     """
     multiChannelConvert
@@ -60,18 +57,11 @@ def multiChannelConvert(image_tensor):
     return multi_channel_image
 
 
-def keepPickle(multi_channel_image, path, file_number):
+def keepPickle(multi_channel_image, path):
     """#pickle保存"""
 
-    dirname = os.path.join('/mnt/HDD4TB-3/sugiura/pix2pix/mycreat_UCFdataset_multichannel_pickle2', path)
-
-    if not os.path.exists(dirname):
-       os.makedirs(dirname)
-
-    fname = path + '_' + str(file_number) + '.pickle'
-    pickle_path = os.path.join(dirname, fname)
-    with open(pickle_path, mode='wb') as f:
-       pickle.dump(multi_channel_image, f)
+    with open(path, mode='wb') as f:
+        pickle.dump(multi_channel_image, f)
 
 
 def main():
@@ -85,7 +75,11 @@ def main():
     parser.add_argument('-r', '--path', type=str,
                         default='/mnt/HDD4TB-3/sugiura/pix2pix/imageUCFdataset/',
                         help='path of dataset.')
+    parser.add_argument('-p', '--dir', type=str,
+                        default='/mnt/HDD4TB-3/sugiura/pix2pix/mycreat_UCFdataset_multichannel_pickle2',
+                        help='path of dataset.')
     args = parser.parse_args()
+
     print(args)
 
     path = args.path
@@ -98,17 +92,30 @@ def main():
     # print(files_dir)
 
 
-    for i in range(len(files_dir) - 37):
-        fname_path = os.path.join(path, files_dir[i + 37])
+    for i in range(len(files_dir)):
+        fname_path = os.path.join(path, files_dir[i])
         files = os.listdir(fname_path)
         files_file = [f for f in files if os.path.isfile(os.path.join(fname_path, f))]
         print(len(files_file))
 
         for index in range(len(files_file)):
-            fname = files_dir[i + 37] + '_' + str(index) + '.png'
-            file_path = os.path.join(path, files_dir[i + 37], fname)
+            mkdir_path = args.dir
+            dirname = os.path.join(mkdir_path, files_dir[i])
+            if not os.path.exists(dirname):
+                os.makedirs(dirname)
+
+            fname = files_dir[i] + '_' + str(index) + '.pickle'
+            pickle_path = os.path.join(dirname, fname)
+
+            if os.path.exists(pickle_path):
+                continue
+
+            fname = files_dir[i] + '_' + str(index) + '.png'
+            file_path = os.path.join(path, files_dir[i], fname)
             print(file_path)
             assert os.path.exists(file_path)
+
+
             im = cv2.imread(file_path)
             cfg = get_cfg()
             cfg.merge_from_file(model_zoo.get_config_file("COCO-PanopticSegmentation/panoptic_fpn_R_101_3x.yaml"))
@@ -118,7 +125,7 @@ def main():
 
             multi_channel_image = multiChannelConvert(panoptic_seg)
 
-            keepPickle(multi_channel_image, files_dir[i + 37], index)
+            keepPickle(multi_channel_image, pickle_path)
 
         # torch.set_printoptions(edgeitems=1000)
         # print(panoptic_seg)
