@@ -1,5 +1,6 @@
 __pycache__/
-data/
+CMPFacadeDatasets/
+BookDatasets/
 imageUCFdataset/
 logs/
 mycreat_UCFdataset_multichannel_pickle/
