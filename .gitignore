@@ -8,3 +8,6 @@ output/
 pickle/
 UCFdataset/
 *.pickle
+BookOutput/
+myPix2pixOutput/
+CMPFacadeBookPix2pixOutput/
