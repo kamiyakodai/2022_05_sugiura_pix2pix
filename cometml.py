@@ -28,3 +28,16 @@ def dLossComet(experiment, lossD, epoch):
                             lossD,
                             step = epoch,
                             )
+
+def testGLossComet(experiment, meanLossG, step):
+    experiment.log_metric("lossG",
+                            meanLossG,
+                            step = step,
+                            )
+
+
+def testDLossComet(experiment, meanLossD, step):
+    experiment.log_metric("lossD",
+                            meanLossD,
+                            step = step,
+                            )

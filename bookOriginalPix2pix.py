@@ -15,6 +15,10 @@ import torchvision.utils as vutils
 from PIL import Image
 import cometml
 import FID
+import glob
+import random
+import warnings
+warnings.filterwarnings('ignore')
 
 
 # 条件画像と正解画像のペアデータセット生成クラス
@@ -111,12 +115,25 @@ class AlignedDataset(Dataset):
         # 全画像ファイル数を返す
         return len(self.AB_paths)
 
-"""## 生成器Gの処理定義
+    # def test(self):
+    #     list=glob.glob('/mnt/HDD4TB-3/sugiura/pix2pix/BookDatasets/facades/test/*.jpg')
+    #     data=random.choice(list)
+    #     AB = Image.open(data).convert('RGB')
 
+    #     # 画像を2分割してAとBをそれぞれ取得
+    #     # ランダムシードの生成
+    #     param = self.__transform_param()
+    #     w, h = AB.size
+    #     w2 = int(w / 2)
+    #     # 256x256サイズの画像生成
+    #     # 一度リサイズしてランダムな位置で256x256にcropする
+    #     # AとBは同じ位置からcropする
+    #     param['flip'] = False
+    #     transform = self.__transform(param)
+    #     A = transform(AB.crop((0, 0, w2, h)))
+    #     B = transform(AB.crop((w2, 0, w, h)))
 
-
-
-"""
+    #     return {'A': B, 'B': A}
 
 # 生成器Gのクラス定義
 class Generator(nn.Module):
@@ -308,7 +325,7 @@ class Pix2Pix():
             m.weight.data.normal_(1.0, 0.02)
             m.bias.data.fill_(0)
 
-    def train(self, data, batches_done):
+    def train(self, data):
         # ドメインAのラベル画像とドメインBの正解画像を設定
         self.realA = data['A'].to(self.config.device)
         self.realB = data['B'].to(self.config.device)
@@ -382,7 +399,6 @@ class Pix2Pix():
             'lossD': lossD.item(),
             }
 
-        self.save_loss(train_info, batches_done)
 
     def save_model(self, epoch):
         # モデルの保存
@@ -397,8 +413,7 @@ class Pix2Pix():
                 '{}/pix2pix_epoch_{}.png'.format(self.config.output_dir, epoch),
                 normalize=True)
 
-    def save_loss(self, train_info, batches_done):
-        return
+
 # パラメータの保存
 import json
 def save_json(file, save_path, mode):
@@ -407,7 +422,7 @@ def save_json(file, save_path, mode):
 
 class Opts():
     def __init__(self):
-        self.epochs = 100
+        self.epochs = 200
         self.save_data_interval = 10
         self.save_image_interval = 10
         self.log_interval = 20
@@ -472,8 +487,9 @@ experiment = cometml.comet()
 
 for epoch in range(1, opt.epochs + 1):
     for batch_num, data in enumerate(dataloader):
-        batches_done = (epoch - 1) * len(dataloader) + batch_num
-        model.train(data, batches_done)
+        # batches_done = (epoch - 1) * len(dataloader) + batch_num
+        # print(batches_done)
+        model.train(data)
 
         if batch_num % opt.log_interval == 0:
             print("===> Epoch[{}]({}/{}): Loss_D: {:.4f} Loss_G: {:.4f}".format(
@@ -499,3 +515,11 @@ for epoch in range(1, opt.epochs + 1):
         cometml.FIDComet(experiment, fretchet_dist, epoch)
 
     model.update_learning_rate()
+
+# for index in range(64):
+#     data = AlignedDataset(opt).test
+#     model.train(data)
+#     model.save_image(opt.epochs+index)
+#     print("===>  Loss_D: {:.4f} Loss_G: {:.4f}".format(model.lossD_real, model.lossG_GAN))
+#     cometml.testGLossComet(experiment, model.lossG_GAN, index)
+#     cometml.testDLossComet(experiment, model.lossD_real, index)
