@@ -31,7 +31,7 @@ class Pix2Pix():
         self.config = config
 
         # 生成器Gのオブジェクト取得とデバイス設定
-        self.netG = generator.Generator().to(self.config.device)
+        self.netG = generator.Generator(config.input_channel).to(self.config.device)
         # ネットワークの初期化
         self.netG.apply(self.__weights_init)
         # 生成器Gのモデルファイル読み込み(学習を引き続き行う場合)
@@ -39,7 +39,7 @@ class Pix2Pix():
             self.netG.load_state_dict(torch.load(self.config.path_to_generator, map_location=self.config.device_name), strict=False)
 
         # 識別器Dのオブジェクト取得とデバイス設定
-        self.netD = discriminator.Discriminator().to(self.config.device)
+        self.netD = discriminator.Discriminator(config.input_channel).to(self.config.device)
         # Dのネットワーク初期化
         self.netD.apply(self.__weights_init)
         # Dのモデルファイル読み込み(学習を引き続き行う場合)

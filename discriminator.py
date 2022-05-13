@@ -3,12 +3,12 @@ import torch
 
 # 識別器Dのクラス定義
 class Discriminator(nn.Module):
-    def __init__(self):
+    def __init__(self, input_channel):
         super(Discriminator, self).__init__()
         # 70x70PatchGAN識別器モデルの定義
         # 2つの画像を結合したものが入力となるため、チャネル数は3*2=6となる
         self.model = nn.Sequential(
-            nn.Conv2d(15, 64, kernel_size=4, stride=2, padding=1),
+            nn.Conv2d(input_channel + 3, 64, kernel_size=4, stride=2, padding=1),
             nn.LeakyReLU(0.2, True),
             self.__layer(64, 128),
             self.__layer(128, 256),

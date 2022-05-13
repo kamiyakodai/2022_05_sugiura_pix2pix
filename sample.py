@@ -3,6 +3,7 @@ import numpy as np
 import argparse
 
 
+
 parser = argparse.ArgumentParser(description='simple CNN model')
 
 parser.add_argument('-r', '--root', type=str, default='./data',

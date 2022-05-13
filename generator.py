@@ -3,10 +3,10 @@ import torch
 
 # 生成器Gのクラス定義
 class Generator(nn.Module):
-    def __init__(self):
+    def __init__(self, input_channel):
         super(Generator, self).__init__()
         # U-NetのEocoder部分
-        self.down0 = nn.Conv2d(12, 64, kernel_size=4, stride=2, padding=1)
+        self.down0 = nn.Conv2d(input_channel, 64, kernel_size=4, stride=2, padding=1)
         self.down1 = self.__encoder_block(64, 128)
         self.down2 = self.__encoder_block(128, 256)
         self.down3 = self.__encoder_block(256, 512)

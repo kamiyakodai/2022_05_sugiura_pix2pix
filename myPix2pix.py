@@ -25,7 +25,7 @@ def save_json(file, param_save_path, mode):
 
 
 class Opts():
-    def __init__(self):
+    def __init__(self, args):
         self.epochs = 200
         self.save_data_interval = 10
         self.save_image_interval = 10
@@ -46,6 +46,7 @@ class Opts():
         self.path_to_discriminator = None
         self.device_name = "cuda:0"
         self.device = torch.device(self.device_name)
+        self.input_channel = args.channels
 
     def to_dict(self):
         parameters = {
@@ -73,7 +74,20 @@ class Opts():
 
 
 def main():
-    opt = Opts()
+    parser = argparse.ArgumentParser(description='simple CNN model')
+
+    parser.add_argument('-c', '--channels', type=int,
+                        choices=[3, 12],
+                        help='number of channels.')
+
+    parser.add_argument('-d', '--dataset', type=str,
+                        choices=['book', 'official'],
+                        help='dataset name')
+
+
+    args = parser.parse_args()
+
+    opt = Opts(args)
 
     output_dir_path = '/mnt/HDD4TB-3/sugiura/pix2pix/myPix2pixOutput'
     if not os.path.exists(output_dir_path):
@@ -84,7 +98,16 @@ def main():
 
     model = Pix2pixModel.Pix2Pix(opt)
 
-    dataset = getDataset.AlignedDataset(opt)
+    if args.channels == 3:
+        if args.dataset == 'book':
+            dataset = getDataset.AlignedDataset(opt)
+        else:
+            dataset = getDataset.AlignedDataset(opt)
+    else:
+        if args.dataset == 'official':
+            dataset = getDataset.AlignedDataset(opt)
+        else:
+            dataset = getDataset.AlignedDataset(opt)
 
     dataloader = DataLoader(dataset, batch_size=opt.batch_size, shuffle=True)
     val_loader = DataLoader(dataset, batch_size=opt.batch_size, shuffle=False)
