@@ -87,14 +87,27 @@ def main():
     dataset = getDataset.AlignedDataset(opt)
 
     dataloader = DataLoader(dataset, batch_size=opt.batch_size, shuffle=True)
+    val_loader = DataLoader(dataset, batch_size=opt.batch_size, shuffle=False)
 
     experiment = cometml.comet()
 
     """## 学習の開始"""
 
     for epoch in range(1, opt.epochs + 1):
+        model.netG.train()
+        model.netD.train()
+
         for batch_num, data in enumerate(dataloader):
             model.train(data)
+
+            if batch_num % opt.log_interval == 0:
+                print("===> Epoch[{}]({}/{}): Loss_D: {:.4f} Loss_G: {:.4f}".format(
+                    epoch, batch_num, len(dataloader), model.lossD_real, model.lossG_GAN))
+                cometml.gLossComet(experiment, model.lossG_GAN, epoch)
+                cometml.dLossComet(experiment, model.lossD_real, epoch)
+
+        for batch_num, data in enumerate(val_loader):
+            model.eval(data)
 
             if batch_num % opt.log_interval == 0:
                 print("===> Epoch[{}]({}/{}): Loss_D: {:.4f} Loss_G: {:.4f}".format(

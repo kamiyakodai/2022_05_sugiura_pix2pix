@@ -86,6 +86,7 @@ class Pix2Pix():
     def train(self, data):
         # ドメインAのラベル画像とドメインBの正解画像を設定
         #　両方四次元
+
         self.realA = data['A'].to(self.config.device)
         self.realB = data['B'].to(self.config.device)
 
@@ -152,7 +153,45 @@ class Pix2Pix():
         self.lossD_fake = lossD_fake
         self.lossD = lossD
 
+    def eval(self, data):
+        self.netG.eval()
+        self.netD.eval()
+        with torch.no_grad():
 
+            self.realA = data['A'].to(self.config.device)
+            self.realB = data['B'].to(self.config.device)
+
+            # 生成器Gで画像生成
+            fakeB = self.netG(self.realA)
+
+            # Discriminator
+            # 条件画像(A)と生成画像(B)を結合
+            fakeAB = torch.cat((self.realA, fakeB), dim=1)
+            # 識別器Dに生成画像を入力、このときGは更新しないのでdetachして勾配は計算しない
+            pred_fake = self.netD(fakeAB.detach())
+            # 偽物画像を入力したときの識別器DのGAN損失を算出
+            lossD_fake = self.criterionGAN(pred_fake, False)
+
+            # 条件画像(A)と正解画像(B)を結合
+            realAB = torch.cat((self.realA, self.realB), dim=1)
+            # 識別器Dに正解画像を入力
+            pred_real = self.netD(realAB)
+            # 正解画像を入力したときの識別器DのGAN損失を算出
+            lossD_real = self.criterionGAN(pred_real, True)
+
+            # 偽物画像と正解画像のGAN損失の合計に0.5を掛ける
+            lossD = (lossD_fake + lossD_real) * 0.5
+
+            # Generator
+            # 評価フェーズなので勾配は計算しない
+            # 識別器Dに生成画像を入力
+            pred_fake = self.netD(fakeAB)
+
+            # 生成器GのGAN損失を算出
+            lossG_GAN = self.criterionGAN(pred_fake, True)
+
+            # 生成器Gの損失を合計
+            lossG = lossG_GAN
 
     def save_model(self, epoch):
         # モデルの保存
