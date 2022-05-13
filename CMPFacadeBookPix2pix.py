@@ -2,8 +2,6 @@ import sys
 import argparse
 import os.path
 import random
-import time
-import datetime
 import numpy as np
 import torch
 from torch import nn
@@ -18,6 +16,8 @@ from torch.nn import functional as FF
 from scipy.linalg import sqrtm
 import cometml
 import FID
+import warnings
+warnings.filterwarnings('ignore')
 
 """## ペア画像のデータ生成"""
 # 条件画像と正解画像のペアデータセット生成クラス
@@ -165,12 +165,7 @@ class AlignedDataset(Dataset):
         # 全画像ファイル数を返す
         return len(self.A_paths)
 
-"""## 生成器Gの処理定義
 
-
-
-
-"""
 
 # 生成器Gのクラス定義
 class Generator(nn.Module):
@@ -359,7 +354,7 @@ class Pix2Pix():
             m.weight.data.normal_(1.0, 0.02)
             m.bias.data.fill_(0)
 
-    def train(self, data, batches_done):
+    def train(self, data):
         # ドメインAのラベル画像とドメインBの正解画像を設定
         self.realA = data['A'].to(self.config.device)
         self.realB = data['B'].to(self.config.device)
@@ -433,7 +428,6 @@ class Pix2Pix():
             'lossD': lossD.item(),
             }
 
-        self.save_loss(train_info, batches_done)
 
     def save_model(self, epoch):
         # モデルの保存
@@ -448,9 +442,6 @@ class Pix2Pix():
                 '{}/pix2pix_epoch_{}.png'.format(self.config.output_dir, epoch),
                 normalize=True)
 
-    def save_loss(self, train_info, batches_done):
-        return
-
 
 # パラメータの保存
 import json
@@ -462,7 +453,7 @@ def save_json(file, save_path, mode):
 
 class Opts():
     def __init__(self):
-        self.epochs = 100
+        self.epochs = 200
         self.save_data_interval = 10
         self.save_image_interval = 10
         self.log_interval = 20
@@ -527,8 +518,7 @@ experiment = cometml.comet()
 
 for epoch in range(1, opt.epochs + 1):
     for batch_num, data in enumerate(dataloader):
-        batches_done = (epoch - 1) * len(dataloader) + batch_num
-        model.train(data, batches_done)
+        model.train(data)
 
         if batch_num % opt.log_interval == 0:
             print("===> Epoch[{}]({}/{}): Loss_D: {:.4f} Loss_G: {:.4f}".format(
@@ -555,36 +545,83 @@ for epoch in range(1, opt.epochs + 1):
 
     model.update_learning_rate()
 
-"""## 生成画像の確認"""
+def test(model, experiment):
+    lossG_list = []
+    lossD_list = []
 
-# 生成画像の確認 (入力画像、生成画像、正解画像)
-from IPython.display import Image,display_png
+    for index in range(10):
+        data_path = '/mnt/HDD4TB-3/sugiura/pix2pix/CMPFacadeDatasets/facades/base'
+        file_number = f'{index+1:04}'
+        data_fname_jpg = 'cmp_b' + file_number + '.jpg'
+        data_file_path_jpg = os.path.join(data_path, data_fname_jpg)
 
-image_name = '{}/pix2pix_epoch_{}.png'.format('./output', opt.epochs)
-display_png(Image(image_name))
+        data_fname_png = 'cmp_b' + file_number + '.png'
+        data_file_path_png = os.path.join(data_path, data_fname_png)
+        real = Image.open(data_file_path_jpg).convert('RGB')
+        label = Image.open(data_file_path_png).convert('RGB')
 
-from PIL import Image
-import numpy as np
+        load_size = 286
+        real = real.resize((load_size, load_size), Image.NEAREST)
+        label = label.resize((load_size, load_size), Image.NEAREST)
 
-im = np.array(Image.open('./sample1.jpg'))
+        crop_size = 256
+        real = real.resize((crop_size, crop_size), Image.NEAREST)
+        label = label.resize((crop_size, crop_size), Image.NEAREST)
+
+        transform = transforms.ToTensor()
+        real = transform(real)
+        label = transform(label)
+
+        real = real.to(torch.device("cuda:0"))
+        real.unsqueeze_(0)
+
+        label = label.to(torch.device("cuda:0"))
+        label.unsqueeze_(0)
+
+        fake = model.netG(label)
+        # Discriminator
+        # 条件画像(A)と生成画像(B)を結合
+        fakeAB = torch.cat((label, fake), dim=1)
+        # 識別器Dに生成画像を入力、このときGは更新しないのでdetachして勾配は計算しない
+        pred_fake = model.netD(fakeAB.detach())
+        # 偽物画像を入力したときの識別器DのGAN損失を算出
+        lossD_fake = model.criterionGAN(pred_fake, False)
+
+        # 条件画像(A)と正解画像(B)を結合
+        realAB = torch.cat((label, real), dim=1)
+        # 識別器Dに正解画像を入力
+        pred_real = model.netD(realAB)
+        # 正解画像を入力したときの識別器DのGAN損失を算出
+        lossD_real = model.criterionGAN(pred_real, True)
+
+        # 偽物画像と正解画像のGAN損失の合計に0.5を掛ける
+        lossD = (lossD_fake + lossD_real) * 0.5
+
+        with torch.no_grad():
+            pred_fake = model.netD(fakeAB)
+
+        # 生成器GのGAN損失を算出
+        lossG_GAN = model.criterionGAN(pred_fake, True)
+
+        # 生成器Gの損失を合計
+        lossG = lossG_GAN
+
+        lossG_list.append(lossG)
+        lossD_list.append(lossD)
+
+        output_image = torch.cat([fake, real], dim=3)
+        vutils.save_image(output_image,
+            '{}/pix2pix_test_{}.png'.format(Opts().output_dir, index),
+            normalize=True)
 
 
-transform=transforms.Compose([
-                              transforms.ToTensor(),
-                              transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-                              ])
-im=transform(im)
-im=im.to("cuda")
+    meanG = sum(lossG_list) / len(lossG_list)
+    meanD = sum(lossD_list) / len(lossD_list)
 
-#pytorchは四次元しか受け付けない．
-#b,c,h,wの順にする
-im.unsqueeze_(0)
-x=model.netG(im)
+    f = open("CMPFacadeBookPix2pixLoss.txt", "w")
+    f.write("meanLossG:" + str(meanG))
+    f.write("\n")
+    f.write("meanLossD:" + str(meanD))
+    f.close()
 
-print(x)
-x=x.to("cpu")
-x.squeeze_(0)
-#x = x / 2 + 0.5   # 標準化を戻す
-npimg = x.detach().numpy()   # NumPy配列に変換
-plt.imshow(np.transpose(npimg, (1, 2, 0)))   # (高さ, 横幅, チャネル数)となるよう整形
-plt.show()   #画像の表示
+test(model, experiment)
