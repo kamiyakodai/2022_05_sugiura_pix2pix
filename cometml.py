@@ -29,15 +29,15 @@ def dLossComet(experiment, lossD, epoch):
                             step = epoch,
                             )
 
-def testGLossComet(experiment, meanLossG, step):
+def valGLossComet(experiment, meanLossG, epoch):
     experiment.log_metric("lossG",
                             meanLossG,
-                            step = step,
+                            step = epoch,
                             )
 
 
-def testDLossComet(experiment, meanLossD, step):
+def valDLossComet(experiment, meanLossD, epoch):
     experiment.log_metric("lossD",
                             meanLossD,
-                            step = step,
+                            step = epoch,
                             )

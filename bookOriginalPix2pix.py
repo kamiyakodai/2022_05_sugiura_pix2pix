@@ -422,7 +422,7 @@ def save_json(file, save_path, mode):
 
 class Opts():
     def __init__(self):
-        self.epochs = 200
+        self.epochs = 100
         self.save_data_interval = 10
         self.save_image_interval = 10
         self.log_interval = 20

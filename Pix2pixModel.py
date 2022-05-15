@@ -189,9 +189,20 @@ class Pix2Pix():
 
             # 生成器GのGAN損失を算出
             lossG_GAN = self.criterionGAN(pred_fake, True)
+            # 生成器GのL1損失を算出
+            lossG_L1 = self.criterionL1(fakeB, self.realB) * self.config.lambda_L1
 
             # 生成器Gの損失を合計
-            lossG = lossG_GAN
+            lossG = lossG_GAN + lossG_L1
+
+            # for log
+            self.fakeB = fakeB
+            self.lossG_GAN = lossG_GAN
+            self.lossG_L1 = lossG_L1
+            self.lossG = lossG
+            self.lossD_real = lossD_real
+            self.lossD_fake = lossD_fake
+            self.lossD = lossD
 
     def save_model(self, epoch):
         # モデルの保存

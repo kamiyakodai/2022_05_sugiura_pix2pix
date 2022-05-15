@@ -81,7 +81,7 @@ def main():
                         help='number of channels.')
 
     parser.add_argument('-d', '--dataset', type=str,
-                        choices=['book', 'official'],
+                        choices=['book', 'CMPfacade'],
                         help='dataset name')
 
 
@@ -89,25 +89,28 @@ def main():
 
     opt = Opts(args)
 
-    output_dir_path = '/mnt/HDD4TB-3/sugiura/pix2pix/myPix2pixOutput'
-    if not os.path.exists(output_dir_path):
-        os.mkdir(output_dir_path)
-
-    param_save_path = os.path.join(output_dir_path, 'param.json')
-    save_json(opt.to_dict(), param_save_path, 'w')
-
     model = Pix2pixModel.Pix2Pix(opt)
 
     if args.channels == 3:
         if args.dataset == 'book':
-            dataset = getDataset.AlignedDataset(opt)
+            dataset = getDataset.AlignedDataset3Book(opt)
+            opt.output_dir = '3ChannelBookOutput'
         else:
-            dataset = getDataset.AlignedDataset(opt)
+            dataset = getDataset.AlignedDataset3CMP(opt)
+            opt.output_dir = '3ChannelCMPfacadeOutput'
     else:
-        if args.dataset == 'official':
-            dataset = getDataset.AlignedDataset(opt)
+        if args.dataset == 'book':
+            dataset = getDataset.AlignedDataset12Book(opt)
+            opt.output_dir = '12ChannelBookOutput'
         else:
-            dataset = getDataset.AlignedDataset(opt)
+            dataset = getDataset.AlignedDataset12CMP(opt)
+            opt.output_dir = '12ChannelCMPfacadeOutput'
+
+    if not os.path.exists(opt.output_dir):
+        os.mkdir(opt.output_dir)
+
+    param_save_path = os.path.join(opt.output_dir, 'param.json')
+    save_json(opt.to_dict(), param_save_path, 'w')
 
     dataloader = DataLoader(dataset, batch_size=opt.batch_size, shuffle=True)
     val_loader = DataLoader(dataset, batch_size=opt.batch_size, shuffle=False)
@@ -117,26 +120,30 @@ def main():
     """## 学習の開始"""
 
     for epoch in range(1, opt.epochs + 1):
-        model.netG.train()
-        model.netD.train()
 
         for batch_num, data in enumerate(dataloader):
+            model.netG.train()
+            model.netD.train()
             model.train(data)
 
+            #len(dataloader)がデータセットによって違うのはなぜ？
             if batch_num % opt.log_interval == 0:
                 print("===> Epoch[{}]({}/{}): Loss_D: {:.4f} Loss_G: {:.4f}".format(
                     epoch, batch_num, len(dataloader), model.lossD_real, model.lossG_GAN))
                 cometml.gLossComet(experiment, model.lossG_GAN, epoch)
                 cometml.dLossComet(experiment, model.lossD_real, epoch)
 
-        for batch_num, data in enumerate(val_loader):
-            model.eval(data)
+        if epoch % opt.save_data_interval == 0:
+            for batch_num, data in enumerate(val_loader):
+                model.netG.eval()
+                model.netD.eval()
+                model.eval(data)
 
-            if batch_num % opt.log_interval == 0:
-                print("===> Epoch[{}]({}/{}): Loss_D: {:.4f} Loss_G: {:.4f}".format(
-                    epoch, batch_num, len(dataloader), model.lossD_real, model.lossG_GAN))
-                cometml.gLossComet(experiment, model.lossG_GAN, epoch)
-                cometml.dLossComet(experiment, model.lossD_real, epoch)
+                if batch_num % opt.log_interval == 0:
+                    print("===> Validation:Epoch[{}]({}/{}): Loss_D: {:.4f} Loss_G: {:.4f}".format(
+                        epoch, batch_num, len(dataloader), model.lossD_real, model.lossG_GAN))
+                    cometml.valGLossComet(experiment, model.lossG_GAN, epoch)
+                    cometml.valDLossComet(experiment, model.lossD_real, epoch)
 
         if epoch % opt.save_data_interval == 0:
             model.save_model(epoch)
