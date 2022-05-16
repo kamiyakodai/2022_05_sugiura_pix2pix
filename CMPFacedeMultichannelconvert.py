@@ -7,20 +7,11 @@ Original file is located at
     https://colab.research.google.com/drive/1jao_rbWJPgiAo7SeULMA84CbiQvMdEp_
 """
 
-import sys
-import argparse
+
 import os
-import random
-import time
-import datetime
 import numpy as np
 import torch
-from torch import nn
-import torch.nn.functional as F
-import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
 import torchvision.transforms as transforms
-import torchvision.utils as vutils
 from PIL import Image
 import pickle
 
@@ -174,7 +165,7 @@ def calMultichannel(label_image_numpy):
 def main():
     dir = '/mnt/HDD4TB-3/sugiura/pix2pix/datasets/facades/train'
     imgs_list = getitem(dir)
-    mkdir_name = '/mnt/HDD4TB-3/sugiura/pix2pix/pickle_datasets_train'
+    mkdir_name = '/mnt/HDD4TB-3/sugiura/pix2pix/CMPfacadePickl_datasets_train'
     if not os.path.exists(mkdir_name):
         os.mkdir(mkdir_name)
 

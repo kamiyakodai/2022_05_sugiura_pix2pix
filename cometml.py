@@ -9,6 +9,19 @@ def comet():
         )
     return experiment
 
+def valGLossComet(experiment, meanLossG, epoch):
+    experiment.log_metric("valLossG",
+                            meanLossG,
+                            step = epoch,
+                            )
+
+
+def valDLossComet(experiment, meanLossD, epoch):
+    experiment.log_metric("ValLossD",
+                            meanLossD,
+                            step = epoch,
+                            )
+
 def FIDComet(experiment, fretchet_dist, epoch):
     experiment.log_metric("FIDscore",
                             fretchet_dist,
@@ -26,18 +39,5 @@ def gLossComet(experiment, lossG, epoch):
 def dLossComet(experiment, lossD, epoch):
     experiment.log_metric("lossD",
                             lossD,
-                            step = epoch,
-                            )
-
-def valGLossComet(experiment, meanLossG, epoch):
-    experiment.log_metric("lossG",
-                            meanLossG,
-                            step = epoch,
-                            )
-
-
-def valDLossComet(experiment, meanLossD, epoch):
-    experiment.log_metric("lossD",
-                            meanLossD,
                             step = epoch,
                             )

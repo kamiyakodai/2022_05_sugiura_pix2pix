@@ -1,22 +1,14 @@
-import sys
 import argparse
 import os.path
 import torch
-from torch import nn
-from torch.utils.data import Dataset, DataLoader
-import torchvision.transforms as transforms
-import torchvision.utils as vutils
-from PIL import Image
-import torchvision.models as models
-from torch.nn import functional as FF
+from torch.utils.data import DataLoader
 import FID
 import cometml
-from scipy.linalg import sqrtm
-import warnings
-warnings.filterwarnings('ignore')
 import json
 import Pix2pixModel
 import getDataset
+import warnings
+warnings.filterwarnings('ignore')
 
 
 def save_json(file, param_save_path, mode):
@@ -74,7 +66,7 @@ class Opts():
 
 
 def main():
-    parser = argparse.ArgumentParser(description='simple CNN model')
+    parser = argparse.ArgumentParser(description='myPx2pix')
 
     parser.add_argument('-c', '--channels', type=int,
                         choices=[3, 12],
@@ -89,22 +81,27 @@ def main():
 
     opt = Opts(args)
 
-    model = Pix2pixModel.Pix2Pix(opt)
 
     if args.channels == 3:
         if args.dataset == 'book':
-            dataset = getDataset.AlignedDataset3Book(opt)
             opt.output_dir = '3ChannelBookOutput'
+            opt.dataroot = 'BookDatasets/facades'
+            opt.phase = 'train'
+            dataset = getDataset.AlignedDataset3Book(opt)
         else:
-            dataset = getDataset.AlignedDataset3CMP(opt)
             opt.output_dir = '3ChannelCMPfacadeOutput'
+            dataset = getDataset.AlignedDataset3CMP(opt)
     else:
         if args.dataset == 'book':
-            dataset = getDataset.AlignedDataset12Book(opt)
             opt.output_dir = '12ChannelBookOutput'
+            opt.dataroot = 'BookDatasets/facades'
+            opt.phase = 'train'
+            dataset = getDataset.AlignedDataset12Book(opt)
         else:
-            dataset = getDataset.AlignedDataset12CMP(opt)
             opt.output_dir = '12ChannelCMPfacadeOutput'
+            dataset = getDataset.AlignedDataset12CMP(opt)
+
+    model = Pix2pixModel.Pix2Pix(opt)
 
     if not os.path.exists(opt.output_dir):
         os.mkdir(opt.output_dir)
@@ -120,10 +117,10 @@ def main():
     """## 学習の開始"""
 
     for epoch in range(1, opt.epochs + 1):
+        model.netG.train()
+        model.netD.train()
 
         for batch_num, data in enumerate(dataloader):
-            model.netG.train()
-            model.netD.train()
             model.train(data)
 
             #len(dataloader)がデータセットによって違うのはなぜ？
@@ -135,8 +132,6 @@ def main():
 
         if epoch % opt.save_data_interval == 0:
             for batch_num, data in enumerate(val_loader):
-                model.netG.eval()
-                model.netD.eval()
                 model.eval(data)
 
                 if batch_num % opt.log_interval == 0:
@@ -145,22 +140,18 @@ def main():
                     cometml.valGLossComet(experiment, model.lossG_GAN, epoch)
                     cometml.valDLossComet(experiment, model.lossD_real, epoch)
 
-        if epoch % opt.save_data_interval == 0:
             model.save_model(epoch)
-
-        if epoch % opt.save_image_interval == 0:
             model.save_image(epoch)
 
-        #FIDscoreの計算
-        tmp = dataloader.__iter__()
-        data = tmp.next()
-        label = data['A'].to(torch.device("cuda:0"))
-        real = data['B'].to(torch.device("cuda:0"))
-        fake = model.netG(label)
-        fretchet_dist = FID.calculate_fretchet(real, fake)
-        print(fretchet_dist)
-
         if epoch % 10 == 0 or epoch == 1 or epoch == 2 or epoch == 3 :
+            #FIDscoreの計算
+            tmp = dataloader.__iter__()
+            data = tmp.next()
+            label = data['A'].to(torch.device("cuda:0"))
+            real = data['B'].to(torch.device("cuda:0"))
+            fake = model.netG(label)
+            fretchet_dist = FID.calculate_fretchet(real, fake)
+            print(fretchet_dist)
             cometml.FIDComet(experiment, fretchet_dist, epoch)
 
         model.update_learning_rate()

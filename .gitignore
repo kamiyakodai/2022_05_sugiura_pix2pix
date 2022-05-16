@@ -4,8 +4,7 @@ BookDatasets/
 imageUCFdataset/
 logs/
 mycreat_UCFdataset_multichannel_pickle/
-output/
-pickle/
+*Pickle/
 UCFdataset/
 *.pickle
 *Output/
