@@ -90,6 +90,8 @@ def main():
             dataset = getDataset.AlignedDataset3Book(opt)
         else:
             opt.output_dir = '3ChannelCMPfacadeOutput'
+            opt.dataroot = 'CMPFacadeDatasets/facades'
+            opt.phase = 'base'
             dataset = getDataset.AlignedDataset3CMP(opt)
     else:
         if args.dataset == 'book':
@@ -99,6 +101,8 @@ def main():
             dataset = getDataset.AlignedDataset12Book(opt)
         else:
             opt.output_dir = '12ChannelCMPfacadeOutput'
+            opt.dataroot = 'CMPFacadeDatasets/facades'
+            opt.phase = 'base'
             dataset = getDataset.AlignedDataset12CMP(opt)
 
     model = Pix2pixModel.Pix2Pix(opt)

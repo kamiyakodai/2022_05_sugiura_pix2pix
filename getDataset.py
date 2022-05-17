@@ -304,7 +304,7 @@ class AlignedDataset12Book(Dataset):
 
 
 
-#-----３チャンネルCMPfacadeDatasets-------------------------------------
+#-----１２チャンネルCMPfacadeDatasets-------------------------------------
 
 class AlignedDataset12CMP(Dataset):
     # configは全ての学習条件を格納する
