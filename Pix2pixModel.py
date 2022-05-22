@@ -214,5 +214,5 @@ class Pix2Pix():
         # 条件画像、生成画像、正解画像を並べて画像を保存
         output_image = torch.cat([ self.fakeB, self.realB], dim=3)
         vutils.save_image(output_image,
-                '{}/pix2pix_epoch_{}.png'.format(self.config.output_dir, epoch),
+                '{}/pix2pix_epoch_{}.jpg'.format(self.config.output_dir, epoch),
                 normalize=True)

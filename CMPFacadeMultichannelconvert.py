@@ -163,16 +163,17 @@ def calMultichannel(label_image_numpy):
   return z
 
 def main():
-    dir = '/mnt/HDD4TB-3/sugiura/pix2pix/datasets/facades/train'
+    dir = '/mnt/HDD4TB-3/sugiura/pix2pix/CMPFacadeDatasets/facades/base'
     imgs_list = getitem(dir)
-    mkdir_name = '/mnt/HDD4TB-3/sugiura/pix2pix/CMPfacadePickl_datasets_train'
+    mkdir_name = '/mnt/HDD4TB-3/sugiura/pix2pix/CMPfacadePickle'
     if not os.path.exists(mkdir_name):
         os.mkdir(mkdir_name)
 
     for index in range(len(imgs_list)):
         onehot_label_img = calMultichannel(imgs_list[index])
 
-        pickle_name = 'img_numpy' + str(index) + '.pickle'
+        i = str(index+1)
+        pickle_name = 'img_numpy' + str(i.zfill(4)) + '.pickle'
         pickle_path = os.path.join(mkdir_name, pickle_name)
         print(index)
         with open(pickle_path, mode='wb') as f:

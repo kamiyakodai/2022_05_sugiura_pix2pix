@@ -1,14 +1,16 @@
 import argparse
 import os.path
+from Averagemeter import AverageMeter
 import torch
 from torch.utils.data import DataLoader
 import FID
 import cometml
 import json
 import Pix2pixModel
-import getDataset
 import warnings
 warnings.filterwarnings('ignore')
+import CMPfacade3channel, CMPfacade12channel
+import Averagemeter
 
 
 def save_json(file, param_save_path, mode):
@@ -39,6 +41,7 @@ class Opts():
         self.device_name = "cuda:0"
         self.device = torch.device(self.device_name)
         self.input_channel = args.channels
+        self.train_sheets = 400
 
     def to_dict(self):
         parameters = {
@@ -72,38 +75,20 @@ def main():
                         choices=[3, 12],
                         help='number of channels.')
 
-    parser.add_argument('-d', '--dataset', type=str,
-                        choices=['book', 'CMPfacade'],
-                        help='dataset name')
-
-
     args = parser.parse_args()
 
     opt = Opts(args)
 
-
     if args.channels == 3:
-        if args.dataset == 'book':
-            opt.output_dir = '3ChannelBookOutput'
-            opt.dataroot = 'BookDatasets/facades'
-            opt.phase = 'train'
-            dataset = getDataset.AlignedDataset3Book(opt)
-        else:
             opt.output_dir = '3ChannelCMPfacadeOutput'
-            opt.dataroot = 'CMPFacadeDatasets/facades'
-            opt.phase = 'base'
-            dataset = getDataset.AlignedDataset3CMP(opt)
+            dataset = CMPfacade3channel.AlignedDataset3CMP(opt)
+
+            val_dataset = CMPfacade3channel.valAlignedDataset3CMP(opt, CMPfacade3channel.AlignedDataset3CMP(opt))
     else:
-        if args.dataset == 'book':
-            opt.output_dir = '12ChannelBookOutput'
-            opt.dataroot = 'BookDatasets/facades'
-            opt.phase = 'train'
-            dataset = getDataset.AlignedDataset12Book(opt)
-        else:
             opt.output_dir = '12ChannelCMPfacadeOutput'
-            opt.dataroot = 'CMPFacadeDatasets/facades'
-            opt.phase = 'base'
-            dataset = getDataset.AlignedDataset12CMP(opt)
+            dataset = CMPfacade12channel.AlignedDataset12CMP(opt)
+
+            val_dataset = CMPfacade12channel.valAlignedDataset12CMP(opt, CMPfacade12channel.AlignedDataset12CMP(opt))
 
     model = Pix2pixModel.Pix2Pix(opt)
 
@@ -113,10 +98,15 @@ def main():
     param_save_path = os.path.join(opt.output_dir, 'param.json')
     save_json(opt.to_dict(), param_save_path, 'w')
 
-    dataloader = DataLoader(dataset, batch_size=opt.batch_size, shuffle=True)
-    val_loader = DataLoader(dataset, batch_size=opt.batch_size, shuffle=False)
+    dataloader = DataLoader(dataset, batch_size=opt.batch_size,
+                            shuffle=True , drop_last = True)
+
+    val_loader = DataLoader(val_dataset, batch_size=opt.batch_size, shuffle=False)
 
     experiment = cometml.comet()
+
+    val_lossG = Averagemeter.AverageMeter()
+    val_lossD = Averagemeter.AverageMeter()
 
     """## 学習の開始"""
 
@@ -125,31 +115,45 @@ def main():
         model.netD.train()
 
         for batch_num, data in enumerate(dataloader):
+            batches_done = (epoch - 1) * len(dataloader) + batch_num
             model.train(data)
+            print(batch_num)
 
             #len(dataloader)がデータセットによって違うのはなぜ？
             if batch_num % opt.log_interval == 0:
                 print("===> Epoch[{}]({}/{}): Loss_D: {:.4f} Loss_G: {:.4f}".format(
-                    epoch, batch_num, len(dataloader), model.lossD_real, model.lossG_GAN))
-                cometml.gLossComet(experiment, model.lossG_GAN, epoch)
-                cometml.dLossComet(experiment, model.lossD_real, epoch)
+                    epoch, batch_num, len(dataloader), model.lossD, model.lossG_GAN))
 
-        if epoch % opt.save_data_interval == 0:
-            for batch_num, data in enumerate(val_loader):
-                model.eval(data)
+            cometml.gLossComet(experiment, model.lossG_GAN, batches_done)
+            cometml.dLossComet(experiment, model.lossD, batches_done)
 
-                if batch_num % opt.log_interval == 0:
-                    print("===> Validation:Epoch[{}]({}/{}): Loss_D: {:.4f} Loss_G: {:.4f}".format(
-                        epoch, batch_num, len(dataloader), model.lossD_real, model.lossG_GAN))
-                    cometml.valGLossComet(experiment, model.lossG_GAN, epoch)
-                    cometml.valDLossComet(experiment, model.lossD_real, epoch)
+            if epoch % 100 == 0:
+                model.save_image(epoch + 10000)
 
+
+        for batch_num, data in enumerate(val_loader):
+            model.eval(data)
+
+            if batch_num == 0:
+                print("===> Validation:Epoch[{}]({}/{})".format(
+                    epoch, batch_num, len(val_loader)))
+
+            val_lossG.update(model.lossG_GAN, data['A'].to(torch.device("cuda:0")).shape[0])
+            val_lossD.update(model.lossD, data['A'].to(torch.device("cuda:0")).shape[0])
+
+        print("Loss_D: {:.4f} Loss_G: {:.4f}".format(
+                    val_lossD.avg, val_lossG.avg))
+
+        cometml.valGLossComet(experiment, model.lossG_GAN, epoch)
+        cometml.valDLossComet(experiment, model.lossD_real, epoch)
+
+        if epoch % 5 == 0:
             model.save_model(epoch)
             model.save_image(epoch)
 
-        if epoch % 10 == 0 or epoch == 1 or epoch == 2 or epoch == 3 :
+        if epoch % 5 == 0 or epoch == 1 or epoch == 2 or epoch == 3 :
             #FIDscoreの計算
-            tmp = dataloader.__iter__()
+            tmp = val_loader.__iter__()
             data = tmp.next()
             label = data['A'].to(torch.device("cuda:0"))
             real = data['B'].to(torch.device("cuda:0"))
@@ -159,6 +163,8 @@ def main():
             cometml.FIDComet(experiment, fretchet_dist, epoch)
 
         model.update_learning_rate()
+        val_lossD.reset()
+        val_lossG.reset()
 
 if __name__ == '__main__':
     main()

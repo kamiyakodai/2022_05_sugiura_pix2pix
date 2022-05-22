@@ -8,7 +8,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 def getPath():
-    dir = 'BookDatasets/facades/train'
+    dir = 'BookDatasets/facades/val'
     AB_paths = sorted(makeDataset(dir))
     return AB_paths
 
@@ -72,7 +72,7 @@ def calMultichannel(img):
 
 
 def keepPickle(label, index):
-    mkdir_name = '/mnt/HDD4TB-3/sugiura/pix2pix/BookPickle'
+    mkdir_name = '/mnt/HDD4TB-3/sugiura/pix2pix/valBookPickle'
     if not os.path.exists(mkdir_name):
         os.mkdir(mkdir_name)
     pickle_name = 'img_numpy' + str(index) + '.pickle'

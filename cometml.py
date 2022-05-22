@@ -29,15 +29,15 @@ def FIDComet(experiment, fretchet_dist, epoch):
                             )
 
 
-def gLossComet(experiment, lossG, epoch):
+def gLossComet(experiment, lossG, batches_done):
     experiment.log_metric("lossG",
                             lossG,
-                            step = epoch,
+                            step = batches_done,
                             )
 
 
-def dLossComet(experiment, lossD, epoch):
+def dLossComet(experiment, lossD, batches_done):
     experiment.log_metric("lossD",
                             lossD,
-                            step = epoch,
+                            step = batches_done,
                             )
