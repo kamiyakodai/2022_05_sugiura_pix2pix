@@ -1,14 +1,11 @@
 import os.path
 from PIL import Image
 import torchvision.transforms as transforms
-import numpy as np
-import random
 from torch.utils.data import Dataset
-import pickle
 from sklearn.model_selection import train_test_split
 
 class AlignedDataset3CMP(Dataset):
-    def __init__(self, config):
+    def __init__(self, config, train_number):
         # データセットクラスの初期化
         self.config = config
 
@@ -25,7 +22,15 @@ class AlignedDataset3CMP(Dataset):
         #正解画像
         self.A_paths = sorted(self.__make_dataset_A(dir))
 
-        self.train_datasets, self.val_datasets = self.splitDataset(config.train_sheets)
+        self.train_datasets = []
+        for i in range(len(self.A_paths)):
+            path = self.A_paths[i]
+            number = path[-8] + path[-7] + path[-6] + path[-5]
+
+            if number in train_number:
+                self.train_datasets.append(path)
+
+        print(len(self.train_datasets))
 
     @classmethod
     def is_image_file_jpg(self, fname):
@@ -62,10 +67,6 @@ class AlignedDataset3CMP(Dataset):
 
         return images_real
 
-    def splitDataset(self, train_sheets):
-        train, val = train_test_split(self.A_paths, train_size=train_sheets)
-
-        return train, val
 
     def __transform(self):
         list = []
@@ -125,12 +126,60 @@ class AlignedDataset3CMP(Dataset):
 
 
 class valAlignedDataset3CMP(Dataset):
-    def __init__(self, config, val:AlignedDataset3CMP):
+    def __init__(self, config, train_number):
         # データセットクラスの初期化
         self.config = config
 
-        self.val_datasets = val.val_datasets
+        dir = os.path.join(config.dataroot, config.phase)
+        self.A_paths = sorted(self.__make_dataset_A(dir))
+
+        self.val_datasets = []
+        for i in range(len(self.A_paths)):
+            path = self.A_paths[i]
+            number = path[-8] + path[-7] + path[-6] + path[-5]
+
+            if not number in train_number:
+                self.val_datasets.append(path)
+
         self.val_datasets.append('CMPFacadeDatasets/facades/base/cmp_b0001.jpg')
+        print(len(self.val_datasets))
+
+
+    @classmethod
+    def is_image_file_jpg(self, fname):
+        # 画像ファイルかどうかを返す
+        #fnameに入っているものの末尾がext(ここではpngかjpg)なのかどうかを判断している．
+        #一致しているなら，trueを返す．
+
+        #データセットの一枚目だけ強制でバリデーション用画像とする．
+        number = fname[-8] + fname[-7] + fname[-6] + fname[-5]
+        if number == '0001':
+            return False
+
+        return fname.endswith('.jpg')
+
+
+    @classmethod
+    #正解画像データセット作成
+    def __make_dataset_A(self, dir):
+        # 画像データセットをメモリに格納
+        # 画像データセットをメモリに格納
+        images_real = []
+
+        #ディレクトリの確認
+        assert os.path.isdir(dir), '%s is not a valid directory' % dir
+
+        #root:現在のディレクトリ
+        # _:内包するディレクトリ
+        #fnames:内包するファイル
+        for root, _, fnames in sorted(os.walk(dir)):
+            for fname in fnames:
+                if self.is_image_file_jpg(fname):
+                    path = os.path.join(root, fname)
+                    images_real.append(path)
+
+        return images_real
+
 
     def __transform(self):
         list = []

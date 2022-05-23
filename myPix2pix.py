@@ -12,6 +12,7 @@ warnings.filterwarnings('ignore')
 import CMPfacade3channel, CMPfacade12channel
 import Averagemeter
 import numpy as np
+import random
 
 def save_json(file, param_save_path, mode):
     with open(param_save_path, mode) as outfile:
@@ -41,7 +42,7 @@ class Opts():
         self.device_name = "cuda:0"
         self.device = torch.device(self.device_name)
         self.input_channel = args.channels
-        self.train_sheets = 300
+        self.train_sheets = 500
 
     def to_dict(self):
         parameters = {
@@ -68,6 +69,23 @@ class Opts():
         return parameters
 
 
+# 重複なし
+def rand_int(a, b, k):
+    ns = []
+    str_ns = []
+    while len(ns) < k:
+        n = random.randint(a, b)
+        if not n in ns:
+            ns.append(n)
+
+    for i in range(len(ns)):
+        n = ns[i]
+        str_n = str(n)
+        zfill_n = str_n.zfill(4)
+        str_ns.append(zfill_n)
+    return str_ns
+
+
 def main():
     parser = argparse.ArgumentParser(description='myPx2pix')
 
@@ -79,16 +97,21 @@ def main():
 
     opt = Opts(args)
 
+    #2以上606以下の乱数
+    #1は確定でバリデーション用とした
+    train_file_number = rand_int(2, 606, opt.train_sheets)
+
+
     if args.channels == 3:
             opt.output_dir = '3C_CMP(trainRatio:' + str(opt.train_sheets) + '/606)'
-            dataset = CMPfacade3channel.AlignedDataset3CMP(opt)
+            dataset = CMPfacade3channel.AlignedDataset3CMP(opt, train_file_number)
 
-            val_dataset = CMPfacade3channel.valAlignedDataset3CMP(opt, CMPfacade3channel.AlignedDataset3CMP(opt))
+            val_dataset = CMPfacade3channel.valAlignedDataset3CMP(opt, train_file_number)
     else:
             opt.output_dir = '12C_CMP(trainRatio:' + str(opt.train_sheets) + '/606)'
-            dataset = CMPfacade12channel.AlignedDataset12CMP(opt)
+            dataset = CMPfacade12channel.AlignedDataset12CMP(opt, train_file_number)
 
-            val_dataset = CMPfacade12channel.valAlignedDataset12CMP(opt, CMPfacade12channel.AlignedDataset12CMP(opt))
+            val_dataset = CMPfacade12channel.valAlignedDataset12CMP(opt, train_file_number)
 
     model = Pix2pixModel.Pix2Pix(opt)
 
@@ -119,7 +142,6 @@ def main():
             model.train(data)
             print(batch_num)
 
-            #len(dataloader)がデータセットによって違うのはなぜ？
             if batch_num % opt.log_interval == 0:
                 print("===> Epoch[{}]({}/{}): Loss_D: {:.4f} Loss_G: {:.4f}".format(
                     epoch, batch_num, len(dataloader), model.lossD, model.lossG_GAN))
