@@ -8,7 +8,7 @@ from scipy.linalg import sqrtm
 
 """## FIDscore"""
 
-def calculate_activation_statistics(images,model,batch_size=128, dims=2048, cuda=False):
+def calculate_activation_statistics(images,model, batch_size=128, dims=2048, cuda=False):
     model.eval()
     act=np.empty((len(images), dims))
 
@@ -21,17 +21,9 @@ def calculate_activation_statistics(images,model,batch_size=128, dims=2048, cuda
         # If model output is not scalar, apply global spatial average pooling.
         # This happens if you choose a dimensionality not equal 2048.
 
+    act = pred.cpu().data.numpy().reshape(pred.size(0), -1)
 
-    # if pred.size(2) != 1 or pred.size(3) != 1:
-    #     pred = FF.adaptive_avg_pool2d(pred, output_size=(1, 1))
-
-    act= pred.cpu().data.numpy().reshape(pred.size(0), -1)
-
-    mu = np.mean(act, axis=0)
-    sigma = np.cov(act, rowvar=False)
-
-    return mu, sigma
-
+    return act
 
 def calculate_frechet_distance(mu1, sigma1, mu2, sigma2, eps=1e-6):
     """Numpy implementation of the Frechet Distance.
@@ -78,9 +70,9 @@ def calculate_fretchet(images_real,images_fake):
     model_inception = models.inception_v3(pretrained=True)
     model_inception.fc = nn.Identity()
     model = model_inception.cuda()
-    mu_1,std_1 = calculate_activation_statistics(images_real, model, cuda=True)
-    mu_2,std_2 = calculate_activation_statistics(images_fake, model, cuda=True)
+
+    act1 = calculate_activation_statistics(images_real, model, cuda=True)
+    act2 = calculate_activation_statistics(images_fake, model, cuda=True)
 
     """get fretched distance"""
-    fid_value = calculate_frechet_distance(mu_1, std_1, mu_2, std_2)
-    return fid_value
+    return act1, act2

@@ -204,15 +204,15 @@ class Pix2Pix():
             self.lossD_fake = lossD_fake
             self.lossD = lossD
 
-    def save_model(self, epoch):
+    def save_model(self, name, epoch):
         # モデルの保存
         output_dir = self.config.output_dir
-        torch.save(self.netG.state_dict(), '{}/pix2pix_G_epoch_{}'.format(output_dir, epoch))
-        torch.save(self.netD.state_dict(), '{}/pix2pix_D_epoch_{}'.format(output_dir, epoch))
+        torch.save(self.netG.state_dict(), '{}/pix2pix_G_epoch_{}{}'.format(output_dir, name, epoch))
+        torch.save(self.netD.state_dict(), '{}/pix2pix_D_epoch_{}{}'.format(output_dir, name, epoch))
 
-    def save_image(self, epoch):
+    def save_image(self, name, epoch):
         # 条件画像、生成画像、正解画像を並べて画像を保存
         output_image = torch.cat([ self.fakeB, self.realB], dim=3)
         vutils.save_image(output_image,
-                '{}/pix2pix_epoch_{}.jpg'.format(self.config.output_dir, epoch),
+                '{}/pix2pix_epoch_{}{}.jpg'.format(self.config.output_dir, name, epoch),
                 normalize=True)

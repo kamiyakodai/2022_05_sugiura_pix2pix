@@ -1,5 +1,5 @@
 import argparse
-import os.path
+import os
 from Averagemeter import AverageMeter
 import torch
 from torch.utils.data import DataLoader
@@ -11,7 +11,7 @@ import warnings
 warnings.filterwarnings('ignore')
 import CMPfacade3channel, CMPfacade12channel
 import Averagemeter
-
+import numpy as np
 
 def save_json(file, param_save_path, mode):
     with open(param_save_path, mode) as outfile:
@@ -25,7 +25,7 @@ class Opts():
         self.save_image_interval = 10
         self.log_interval = 20
         self.sample_interval = 10
-        self.batch_size = 64
+        self.batch_size = 32
         self.load_size = 286
         self.crop_size = 256
         self.cpu = True
@@ -41,7 +41,7 @@ class Opts():
         self.device_name = "cuda:0"
         self.device = torch.device(self.device_name)
         self.input_channel = args.channels
-        self.train_sheets = 400
+        self.train_sheets = 300
 
     def to_dict(self):
         parameters = {
@@ -80,12 +80,12 @@ def main():
     opt = Opts(args)
 
     if args.channels == 3:
-            opt.output_dir = '3ChannelCMPfacadeOutput'
+            opt.output_dir = '3C_CMP(trainRatio:' + str(opt.train_sheets) + '/606)'
             dataset = CMPfacade3channel.AlignedDataset3CMP(opt)
 
             val_dataset = CMPfacade3channel.valAlignedDataset3CMP(opt, CMPfacade3channel.AlignedDataset3CMP(opt))
     else:
-            opt.output_dir = '12ChannelCMPfacadeOutput'
+            opt.output_dir = '12C_CMP(trainRatio:' + str(opt.train_sheets) + '/606)'
             dataset = CMPfacade12channel.AlignedDataset12CMP(opt)
 
             val_dataset = CMPfacade12channel.valAlignedDataset12CMP(opt, CMPfacade12channel.AlignedDataset12CMP(opt))
@@ -93,7 +93,7 @@ def main():
     model = Pix2pixModel.Pix2Pix(opt)
 
     if not os.path.exists(opt.output_dir):
-        os.mkdir(opt.output_dir)
+        os.makedirs(opt.output_dir)
 
     param_save_path = os.path.join(opt.output_dir, 'param.json')
     save_json(opt.to_dict(), param_save_path, 'w')
@@ -128,9 +128,10 @@ def main():
             cometml.dLossComet(experiment, model.lossD, batches_done)
 
             if epoch % 100 == 0:
-                model.save_image(epoch + 10000)
+                model.save_image('train', epoch)
 
-
+        act1 = []
+        act2 = []
         for batch_num, data in enumerate(val_loader):
             model.eval(data)
 
@@ -141,26 +142,38 @@ def main():
             val_lossG.update(model.lossG_GAN, data['A'].to(torch.device("cuda:0")).shape[0])
             val_lossD.update(model.lossD, data['A'].to(torch.device("cuda:0")).shape[0])
 
+            if epoch % 5 == 0 or epoch == 1 or epoch == 2 or epoch == 3 :
+                #バリデーション用のすべてのデータを用いる
+                label = data['A'].to(torch.device("cuda:0"))
+                real = data['B'].to(torch.device("cuda:0"))
+                fake = model.netG(label)
+                act_real, act_fake = FID.calculate_fretchet(real, fake)
+                act1.extend(act_real)
+                act2.extend(act_fake)
+
+        if epoch % 5 == 0 or epoch == 1 or epoch == 2 or epoch == 3 :
+            act1 = np.array(act1)
+            act2 = np.array(act2)
+
+            mu_1 = np.mean(act1, axis=0)
+            std_1 = np.cov(act1, rowvar=False)
+
+            mu_2 = np.mean(act2, axis=0)
+            std_2 = np.cov(act2, rowvar=False)
+
+            fretchet_dist = FID.calculate_frechet_distance(mu_1, std_1, mu_2, std_2)
+            print("FIDscore:" + str(fretchet_dist))
+            cometml.FIDComet(experiment, fretchet_dist, epoch)
+
         print("Loss_D: {:.4f} Loss_G: {:.4f}".format(
                     val_lossD.avg, val_lossG.avg))
 
         cometml.valGLossComet(experiment, model.lossG_GAN, epoch)
         cometml.valDLossComet(experiment, model.lossD_real, epoch)
 
-        if epoch % 5 == 0:
-            model.save_model(epoch)
-            model.save_image(epoch)
-
-        if epoch % 5 == 0 or epoch == 1 or epoch == 2 or epoch == 3 :
-            #FIDscoreの計算
-            tmp = val_loader.__iter__()
-            data = tmp.next()
-            label = data['A'].to(torch.device("cuda:0"))
-            real = data['B'].to(torch.device("cuda:0"))
-            fake = model.netG(label)
-            fretchet_dist = FID.calculate_fretchet(real, fake)
-            print(fretchet_dist)
-            cometml.FIDComet(experiment, fretchet_dist, epoch)
+        if epoch % 10 == 0:
+            model.save_model('val', epoch)
+            model.save_image('val', epoch)
 
         model.update_learning_rate()
         val_lossD.reset()

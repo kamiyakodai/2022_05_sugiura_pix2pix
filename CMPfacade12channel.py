@@ -32,6 +32,12 @@ class AlignedDataset12CMP(Dataset):
         # 画像ファイルかどうかを返す
         #fnameに入っているものの末尾がext(ここではpngかjpg)なのかどうかを判断している．
         #一致しているなら，trueを返す．
+
+        #データセットの一枚目だけ強制でバリデーション用画像とする．
+        number = fname[-8] + fname[-7] + fname[-6] + fname[-5]
+        if number == '0001':
+            return False
+
         return fname.endswith('.jpg')
 
 
@@ -124,6 +130,7 @@ class valAlignedDataset12CMP(Dataset):
         self.config = config
 
         self.val_datasets = val.val_datasets
+        self.val_datasets.append('CMPFacadeDatasets/facades/base/cmp_b0001.jpg')
 
     def __transform(self):
         list = []

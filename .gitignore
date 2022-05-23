@@ -8,3 +8,7 @@ mycreat_UCFdataset_multichannel_pickle/
 UCFdataset/
 *.pickle
 *Output/
+book/
+Unnecessary/
+originalFID.py
+*606)/
