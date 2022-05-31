@@ -67,8 +67,8 @@ def getitem(dir):
         load_size = 286
         B = B.resize((load_size, load_size), Image.NEAREST)
 
-        # crop_size = 256
-        # B = B.resize((crop_size, crop_size), Image.NEAREST)
+        crop_size = 256
+        B = B.resize((crop_size, crop_size), Image.NEAREST)
 
         #H*W*CをC*H*Wに．指定の仕方は，元の位置をどこに持っていくかになる．
         #Hについていうと，Hはもともと0番目にある．その0を持ってくるところに書く
@@ -125,8 +125,7 @@ def getPixelRGBValue(H,W,label_image_numpy):
 
 def calMultichannel(label_image_numpy):
   #縦，横のサイズを指定
-  crop_size = 286
-
+  crop_size = 256
   #0で埋められた二次元ndarrayを用意．大きさは縦*横
   z = torch.zeros(12, crop_size, crop_size)
 
@@ -166,7 +165,7 @@ def main():
     dir = '/mnt/HDD4TB-3/sugiura/pix2pix/CMPFacadeDatasets/facades/base'
     imgs_list = getitem(dir)
     print(len(imgs_list))
-    mkdir_name = '/mnt/HDD4TB-3/sugiura/pix2pix/CMPfacade286*286Pickle'
+    mkdir_name = '/mnt/HDD4TB-3/sugiura/pix2pix/CMPfacadePickle'
     if not os.path.exists(mkdir_name):
         os.mkdir(mkdir_name)
 
