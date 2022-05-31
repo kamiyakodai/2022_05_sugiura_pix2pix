@@ -43,7 +43,7 @@ class Opts():
         self.device_name = "cuda:0"
         self.device = torch.device(self.device_name)
         self.input_channel = args.channels
-        self.train_sheets = 300
+        self.train_sheets = args.sheets
 
     def to_dict(self):
         parameters = {
@@ -121,6 +121,10 @@ def main():
     parser.add_argument('-c', '--channels', type=int,
                         choices=[3, 12],
                         help='number of channels.')
+
+    parser.add_argument('-s', '--sheets', type=int,
+                        choices=[300, 350, 400, 450, 500],
+                        help='number of train sheets.')
 
     args = parser.parse_args()
 
