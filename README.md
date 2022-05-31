@@ -2,7 +2,7 @@
 
 ### 概要
 このリポジトリは，CMPfacadeを用いたpix2pixの学習を行う．
-
+3
 
 ### 実行環境
 requirement.txtを参照
@@ -23,7 +23,7 @@ python datasetPutTogether.py
 12チャンネルで実行する場合
 
 ```sh
-python 
+python CMPFacadeMultichannelconvert.py
 ```
 
 ### 実行方法
