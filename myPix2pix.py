@@ -13,6 +13,7 @@ import CMPfacade3channel, CMPfacade12channel
 import Averagemeter
 import numpy as np
 import random
+import CMP3c, CMP12c
 
 def save_json(file, param_save_path, mode):
     with open(param_save_path, mode) as outfile:
@@ -34,7 +35,7 @@ class Opts():
         self.output_dir = 'myPix2pixOutput'
         self.log_dir = './logs'
         self.phase = 'base'
-        self.lambda_L1 = 100.0
+        self.lambda_L1 = 100
         self.epochs_lr_decay = 0
         self.epochs_lr_decay_start = -1
         self.path_to_generator = None
@@ -42,7 +43,7 @@ class Opts():
         self.device_name = "cuda:0"
         self.device = torch.device(self.device_name)
         self.input_channel = args.channels
-        self.train_sheets = 500
+        self.train_sheets = 300
 
     def to_dict(self):
         parameters = {
@@ -103,15 +104,21 @@ def main():
 
 
     if args.channels == 3:
-            opt.output_dir = '3C_CMP(trainRatio:' + str(opt.train_sheets) + '/606)'
+            opt.output_dir = '3C_CMP286(trainRatio:' + str(opt.train_sheets) + '/606)'
             dataset = CMPfacade3channel.AlignedDataset3CMP(opt, train_file_number)
-
             val_dataset = CMPfacade3channel.valAlignedDataset3CMP(opt, train_file_number)
-    else:
-            opt.output_dir = '12C_CMP(trainRatio:' + str(opt.train_sheets) + '/606)'
-            dataset = CMPfacade12channel.AlignedDataset12CMP(opt, train_file_number)
 
+            # ランダムクロップ
+            # dataset = CMP3c.AlignedDataset3CMP(opt, train_file_number, 'train')
+            # val_dataset = CMP3c.AlignedDataset3CMP(opt, train_file_number, 'val')
+    else:
+            opt.output_dir = '12C_CMP286(trainRatio:' + str(opt.train_sheets) + '/606)'
+            dataset = CMPfacade12channel.AlignedDataset12CMP(opt, train_file_number)
             val_dataset = CMPfacade12channel.valAlignedDataset12CMP(opt, train_file_number)
+
+            # ランダムクロップ
+            # dataset = CMP12c.AlignedDataset12CMP(opt, train_file_number, 'train')
+            # val_dataset = CMP12c.AlignedDataset12CMP(opt, train_file_number, 'val')
 
     model = Pix2pixModel.Pix2Pix(opt)
 
@@ -177,13 +184,7 @@ def main():
             act1 = np.array(act1)
             act2 = np.array(act2)
 
-            mu_1 = np.mean(act1, axis=0)
-            std_1 = np.cov(act1, rowvar=False)
-
-            mu_2 = np.mean(act2, axis=0)
-            std_2 = np.cov(act2, rowvar=False)
-
-            fretchet_dist = FID.calculate_frechet_distance(mu_1, std_1, mu_2, std_2)
+            fretchet_dist = FID.calculate_frechet_distance(act1, act2)
             print("FIDscore:" + str(fretchet_dist))
             cometml.FIDComet(experiment, fretchet_dist, epoch)
 

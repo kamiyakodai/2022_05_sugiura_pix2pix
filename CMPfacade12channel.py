@@ -3,7 +3,6 @@ from PIL import Image
 import torchvision.transforms as transforms
 from torch.utils.data import Dataset
 import pickle
-from sklearn.model_selection import train_test_split
 
 class AlignedDataset12CMP(Dataset):
     def __init__(self, config, train_number):

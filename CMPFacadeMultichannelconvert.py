@@ -67,8 +67,8 @@ def getitem(dir):
         load_size = 286
         B = B.resize((load_size, load_size), Image.NEAREST)
 
-        crop_size = 256
-        B = B.resize((crop_size, crop_size), Image.NEAREST)
+        # crop_size = 256
+        # B = B.resize((crop_size, crop_size), Image.NEAREST)
 
         #H*W*CをC*H*Wに．指定の仕方は，元の位置をどこに持っていくかになる．
         #Hについていうと，Hはもともと0番目にある．その0を持ってくるところに書く
@@ -125,7 +125,7 @@ def getPixelRGBValue(H,W,label_image_numpy):
 
 def calMultichannel(label_image_numpy):
   #縦，横のサイズを指定
-  crop_size = 256
+  crop_size = 286
 
   #0で埋められた二次元ndarrayを用意．大きさは縦*横
   z = torch.zeros(12, crop_size, crop_size)
@@ -165,17 +165,18 @@ def calMultichannel(label_image_numpy):
 def main():
     dir = '/mnt/HDD4TB-3/sugiura/pix2pix/CMPFacadeDatasets/facades/base'
     imgs_list = getitem(dir)
-    mkdir_name = '/mnt/HDD4TB-3/sugiura/pix2pix/CMPfacadePickle'
+    print(len(imgs_list))
+    mkdir_name = '/mnt/HDD4TB-3/sugiura/pix2pix/CMPfacade286*286Pickle'
     if not os.path.exists(mkdir_name):
         os.mkdir(mkdir_name)
 
     for index in range(len(imgs_list)):
+        print(index)
         onehot_label_img = calMultichannel(imgs_list[index])
 
         i = str(index+1)
         pickle_name = 'img_numpy' + str(i.zfill(4)) + '.pickle'
         pickle_path = os.path.join(mkdir_name, pickle_name)
-        print(index)
         with open(pickle_path, mode='wb') as f:
             pickle.dump(onehot_label_img, f)
 

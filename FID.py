@@ -25,12 +25,17 @@ def calculate_activation_statistics(images,model, batch_size=128, dims=2048, cud
 
     return act
 
-def calculate_frechet_distance(mu1, sigma1, mu2, sigma2, eps=1e-6):
+def calculate_frechet_distance(act1, act2, eps=1e-6):
     """Numpy implementation of the Frechet Distance.
     The Frechet distance between two multivariate Gaussians X_1 ~ N(mu_1, C_1)
     and X_2 ~ N(mu_2, C_2) is
             d^2 = ||mu_1 - mu_2||^2 + Tr(C_1 + C_2 - 2*sqrt(C_1*C_2)).
     """
+    mu_1 = np.mean(act1, axis=0)
+    std_1 = np.cov(act1, rowvar=False)
+
+    mu_2 = np.mean(act2, axis=0)
+    std_2 = np.cov(act2, rowvar=False)
 
     mu1 = np.atleast_1d(mu1)
     mu2 = np.atleast_1d(mu2)
