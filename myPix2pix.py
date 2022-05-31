@@ -71,10 +71,10 @@ class Opts():
 
 
 # 重複なし
-def rand_int(a, b, k):
+def rand_int(a, b, train_sheets):
     ns = []
     str_ns = []
-    while len(ns) < k:
+    while len(ns) < train_sheets:
         n = random.randint(a, b)
         if not n in ns:
             ns.append(n)
@@ -87,22 +87,10 @@ def rand_int(a, b, k):
     return str_ns
 
 
-def main():
-    parser = argparse.ArgumentParser(description='myPx2pix')
-
-    parser.add_argument('-c', '--channels', type=int,
-                        choices=[3, 12],
-                        help='number of channels.')
-
-    args = parser.parse_args()
-
-    opt = Opts(args)
-
+def make_loader(args, opt):
     #2以上606以下の乱数
     #1は確定でバリデーション用とした
     train_file_number = rand_int(2, 606, opt.train_sheets)
-
-
     if args.channels == 3:
             opt.output_dir = '3C_CMP286(trainRatio:' + str(opt.train_sheets) + '/606)'
             dataset = CMPfacade3channel.AlignedDataset3CMP(opt, train_file_number)
@@ -120,6 +108,27 @@ def main():
             # dataset = CMP12c.AlignedDataset12CMP(opt, train_file_number, 'train')
             # val_dataset = CMP12c.AlignedDataset12CMP(opt, train_file_number, 'val')
 
+    dataloader =  DataLoader(dataset, batch_size=opt.batch_size,
+                            shuffle=True , drop_last = True)
+
+    val_loader = DataLoader(val_dataset, batch_size=opt.batch_size, shuffle=False)
+
+    return dataloader, val_loader
+
+def main():
+    parser = argparse.ArgumentParser(description='myPx2pix')
+
+    parser.add_argument('-c', '--channels', type=int,
+                        choices=[3, 12],
+                        help='number of channels.')
+
+    args = parser.parse_args()
+
+    opt = Opts(args)
+
+
+    dataloader, val_loader = make_loader(args, opt)
+
     model = Pix2pixModel.Pix2Pix(opt)
 
     if not os.path.exists(opt.output_dir):
@@ -127,11 +136,6 @@ def main():
 
     param_save_path = os.path.join(opt.output_dir, 'param.json')
     save_json(opt.to_dict(), param_save_path, 'w')
-
-    dataloader = DataLoader(dataset, batch_size=opt.batch_size,
-                            shuffle=True , drop_last = True)
-
-    val_loader = DataLoader(val_dataset, batch_size=opt.batch_size, shuffle=False)
 
     experiment = cometml.comet()
 

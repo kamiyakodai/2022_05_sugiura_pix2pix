@@ -31,11 +31,11 @@ def calculate_frechet_distance(act1, act2, eps=1e-6):
     and X_2 ~ N(mu_2, C_2) is
             d^2 = ||mu_1 - mu_2||^2 + Tr(C_1 + C_2 - 2*sqrt(C_1*C_2)).
     """
-    mu_1 = np.mean(act1, axis=0)
-    std_1 = np.cov(act1, rowvar=False)
+    mu1 = np.mean(act1, axis=0)
+    sigma1 = np.cov(act1, rowvar=False)
 
-    mu_2 = np.mean(act2, axis=0)
-    std_2 = np.cov(act2, rowvar=False)
+    mu2 = np.mean(act2, axis=0)
+    sigma2 = np.cov(act2, rowvar=False)
 
     mu1 = np.atleast_1d(mu1)
     mu2 = np.atleast_1d(mu2)
